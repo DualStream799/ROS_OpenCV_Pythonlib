@@ -5,10 +5,10 @@ __author__ = "DualStream799"
 
 # Importing ROS related Libraries:
 import rospy
-from geometry_msgs.msg import Twist, Vector3  #
-from sensor_msgs.msg import LaserScan               # "/scan" reciever
-from std_msgs.msg import UInt8                      # "/bumper" reciever
-from sensor_msgs.msg import Image, CompressedImage  # "/kamera" reciever
+from sensor_msgs.msg import Image, CompressedImage  # for '/kamera' Subscriber
+from geometry_msgs.msg import Twist, Vector3        # for '/cmd_vel' Publisher
+from sensor_msgs.msg import LaserScan               # for '/scan' Subscriber
+from std_msgs.msg import UInt8                      # for '/bumper' Subscriber
 
 # Importing Computer Vision related Libraries:
 from cv_bridge import CvBridge, CvBridgeError
@@ -23,7 +23,7 @@ class TurtleBot():
     """docstring for TurtleBot"""
 
     def __init__(self):
-
+        # Instance needed to convert the images from "/kamera" to OpenCV especifications:
         self.cv_bridge = CvBridge()
 
 
@@ -32,7 +32,8 @@ class TurtleBot():
         # Recieves the "/bumper" Subscriber data:
         self.bumper = 0
         # Recieves the "scan_data" element corresponding with frontal distance:
-        self.ahead = 1.0
+        self.ahead_fisrt = 0
+        self.ahead_last = 0
         # Standard speed for insert on "Vector3" objects:
         self.linear_x = 0
         self.linear_y = 0
@@ -40,12 +41,6 @@ class TurtleBot():
         self.angular_x = 0
         self.angular_y = 0
         self.angular_z = 0
-        # Basic vectors for simple bot maneuvers:
-        self.vector_zero = Vector3(0, 0, 0)
-        self.vector_forward = Vector3(self.linear_x, 0, 0)
-        self.vector_backwards = Vector3(-self.linear_x, 0, 0)
-        self.vector_turn_left = Vector3(0, 0, self.angular_z)
-        self.vector_turn_right = Vector3(0, 0, -self.angular_z)
 
     # METHODS FOR COMPUTER VISION PROCESSMENTS:
     def frame_flip(self, frame, flip_mode):
@@ -89,11 +84,12 @@ class TurtleBot():
         cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 
     
 
-    # METHODS FOR DEALING WITH ROS DATA SENSORS OR ITS MOVIMENTATION:
+    # METHODS FOR DEALING WITH ROS DATA SENSORS:
     def laser_scan(self, data):
         """Deals with "/scan" Subscriber data"""
         self.scan_data = np.array(data.ranges).round(decimals=2)
-        self.ahead = self.scan_data[0]
+        self.ahead_fisrt = self.scan_data[0]
+        self.ahead_last = self.scan_data[-1]
 
     def bumper_scan(self, dado):
         """Deals with "/bumper" Subscriber data"""
@@ -102,6 +98,12 @@ class TurtleBot():
     def convert_compressed_to_cv2(self, image):
         """Deals with '/kamera' Subscriber data"""
         return self.cv_bridge.compressed_imgmsg_to_cv2(image, "bgr8")
+
+    # METHODS FOR ROS MOVIMENTATION:
+    def main_twist(self):
+        """Returns a Twist object with all the linear and algular values on it"""
+        return Twist(Vector3(self.linear_x, self.linear_y, self.linear_z), Vector3(self.angular_x, self.angular_y, self.angular_z))
+
     def run_bot(self, execute_method):
         """Executes an algorithm based on the available ones"""
         if __name__ == "__main__":

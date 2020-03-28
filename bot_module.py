@@ -48,7 +48,7 @@ class TurtleBot():
         self.vector_turn_right = Vector3(0, 0, -self.angular_z)
 
     # METHODS FOR COMPUTER VISION PROCESSMENTS:
-    def frame_flip(frame, flip_mode):
+    def frame_flip(self, frame, flip_mode):
         """Recieves a webcam frame and flips it or not, depending on 'flip' argument
         'flip_mode' = 0 : X-axis Flip (Vertical)
         'flip_mode' > 0 : Y-axis Flip (Horizontal)
@@ -56,7 +56,7 @@ class TurtleBot():
         return cv2.flip(frame, flip_mode)
 
 
-    def frame_spacecolors(frame):
+    def frame_spacecolors(self, frame):
         """Recieves a frame and returns frames on different spacecolors (and flipped)"""
         # Original frame (OpenCV's default frames are BGR):
         bgr_frame = frame
@@ -69,6 +69,13 @@ class TurtleBot():
         
         return bgr_frame, gray_frame, rgb_frame, hsv_frame
 
+
+    def frame_mask_hsv(self, hsv_frame, hue_value, hue_range_width, saturation_range=[0, 255], value_range=[0, 255]):
+        """Creates a mask based on a given Hue value from the standard HSV colorspace and does the convertions to OpenCV HSV colorspace (standard HSV range: 0-360 / OpenCV HSV range: 0-180).
+        By default Saturation and Value components doesn't have filters"""
+        color_high = np.array((hue_value/2 + hue_range_width, saturation_range[1], value_range[1]))
+        color_low = np.array((hue_value/2 - hue_range_width, saturation_range[0], value_range[0]))
+        return cv2.inRange(hsv_frame, color_low, color_high)
 
     def frame_capture(self, filename, frame):
         """Saves a frame on a .jpg file"""

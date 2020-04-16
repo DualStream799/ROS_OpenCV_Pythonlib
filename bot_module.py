@@ -76,6 +76,8 @@ class VisionBotModule():
         # Setting imported libaries available outside '__init__' scope but inside 'ControlBotModule' scope (Imports only when the class is instanced and let them available to all class' methods):
         self.cv2 = cv2
         self.np = np
+
+
     # METHODS FOR COMPUTER VISION PROCESSMENTS:
     def frame_flip(self, frame, flip_mode):
         """Recieves a webcam frame and flips it or not, depending on 'flip' argument
@@ -106,9 +108,46 @@ class VisionBotModule():
         color_low = self.np.array((hue_value/2 - hue_range_width, saturation_range[0], value_range[0]))
         return self.cv2.inRange(hsv_frame, color_low, color_high)
 
+
     def frame_capture(self, filename, frame):
         """Saves a frame on a .jpg file"""
         self.cv2.imwrite(filename + '.jpg', frame)
+
+
+    def contour_detection(self, canny_frame, retrieval_mode=None, approx_method=None):
+        """Delimitates contours on a canny filtered frame"""
+        if retrieval_mode is None:
+            retrieval_mode = self.cv2.RETR_TREE
+        if approx_method is None:
+            approx_method = self.cv2.CHAIN_APPROX_SIMPLE
+        contours, tree = self.cv2.findContours(canny_frame, retrieval_mode, approx_method)
+        return contours
+    
+
+    def display_contours(self, frame, contours_list, color=[0, 255, 0], thickness=2):
+        """Draws all or especified contours depending of the elements on 'contours_list' argumment"""
+        self.cv2.drawContours(frame, contours_list, 0, color, thickness)
+
+
+    def morphological_transformation(self, frame, mode, kernel_size):
+        """Realizes different morphological transformations"""
+        # Creates kernel:
+        kernel = self.np.ones((kernel_size, kernel_size), self.np.uint8)
+        # Transformation selector:
+        if mode == 'erosion':
+            return self.cv2.erode(frame, kernel, iterations=1)
+        elif mode == 'dilation':
+            return self.cv2.dilate(frame, kernel, iterations=1)
+        elif mode == 'opening':
+            return self.cv2.morphologyEx(frame, self.cv2.MORPH_OPEN, kernel)
+        elif mode == 'closing':
+            return self.cv2.morphologyEx(frame, self.cv2.MORPH_CLOSE, kernel)
+        elif mode == 'gradient':
+            return self.cv2.morphologyEx(frame, self.cv2.MORPH_GRADIENT, kernel)
+        elif mode == 'tophat':
+            return self.cv2.morphologyEx(frame, self.cv2.MORPH_TOPHAT, kernel)
+        elif mode == 'blackhat':
+            return self.cv2.morphologyEx(frame, self.cv2.MORPH_BLACKHAT, kernel)
 
 
     # METHODS FOR DISPLAY CONFIGURATIONS:
@@ -117,6 +156,7 @@ class VisionBotModule():
         self.cv2.line(rgb_frame, (point[0] - length/2, point[1]), (point[0] + length/2, point[1]), color, width, length)
         self.cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 
     
+
     def display_text(self, frame, text, position, thickness, font_size=1, text_color=(255, 255, 255), shadow_color=(128, 128, 128), font_style=None, line_style=None):
         """Displays a text on the frame with a shadow behind it for better visualization on any background"""
         if font_style is None:

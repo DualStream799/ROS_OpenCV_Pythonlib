@@ -124,9 +124,11 @@ class VisionBotModule():
         return contours
     
 
-    def display_contours(self, frame, contours_list, color=[0, 255, 0], thickness=2):
-        """Draws all or especified contours depending of the elements on 'contours_list' argumment"""
-        self.cv2.drawContours(frame, contours_list, 0, color, thickness)
+    def display_contours(self, frame, contours_list, mode=-1, color=[0, 255, 0], thickness=2):
+        """Draws all contours on a frame in a given color and border thickness
+        'mode' = -1 : contours' borders
+        'mode' = 0  : contours filled"""
+        self.cv2.drawContours(frame, contours_list, mode, color, thickness)
 
 
     def morphological_transformation(self, frame, mode, kernel_size):

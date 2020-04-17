@@ -153,7 +153,7 @@ class VisionBotModule():
 
 
     # METHODS FOR DISPLAY CONFIGURATIONS:
-    def display_aim(self, rgb_frame, point, color, width, length):
+    def display_aim(self, rgb_frame, point, color=[0, 255, 255], width=2, length=4):
         """Draws a '+' over a given point"""
         self.cv2.line(rgb_frame, (point[0] - length/2, point[1]), (point[0] + length/2, point[1]), color, width, length)
         self.cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 

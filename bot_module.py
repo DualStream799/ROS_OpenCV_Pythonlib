@@ -181,6 +181,28 @@ class SupportBotModule():
         self.np = np
         self.math = math
 
+
+    def convert_lines_angular_to_linear(self, rho, theta):
+        """Calculates two points given a 'rho' and 'theta' values of a line (usefull to deals with the results of 'cv2.HoughLines')"""
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a*rho
+        y0 = b*rho
+        return [(int(x0 + 1000*(-b)), int(y0 + 1000*(a))), (int(x0 - 1000*(-b)) , int(y0 - 1000*(a)))]
+
+
+    def calculate_projection(self, point1, point2, module=True):
+        """Calculates line's projection over an axis (function return the module of the subtraction, for negative values set 'module' to False)
+        x-axis projection = 0 : vertical lines (0º)
+        y-axis projection = 0 : horizontal lines (180º)
+        diff of both projections = 0 : diagonal lines (45º)"""
+        proj_x, proj_y = [point1[0] - point2[0], point1[1] - point2[1]]
+        proj_diff = proj_x - proj_y
+        if module:
+            return abs(proj_x), abs(proj_y), abs(proj_diff)
+        else:
+            return proj_x, proj_y, proj_diff
+
     
     def angular_coefficient(self, point1, point2, decimals=0, to_degrees=False):
         """Calculates the angular coefficient if a line between two points using the current formula: (y - y0) = m*(x - x0)"""

@@ -184,11 +184,11 @@ class SupportBotModule():
 
     def convert_lines_angular_to_linear(self, rho, theta):
         """Calculates two points given a 'rho' and 'theta' values of a line (usefull to deals with the results of 'cv2.HoughLines')"""
-        a = np.cos(theta)
-        b = np.sin(theta)
+        a = self.np.cos(theta)
+        b = self.np.sin(theta)
         x0 = a*rho
         y0 = b*rho
-        return [(int(x0 + 1000*(-b)), int(y0 + 1000*(a))), (int(x0 - 1000*(-b)) , int(y0 - 1000*(a)))]
+        return (int(x0 + 1000*(-b)), int(y0 + 1000*(a))), (int(x0 - 1000*(-b)) , int(y0 - 1000*(a)))
 
 
     def calculate_projection(self, point1, point2, module=True):

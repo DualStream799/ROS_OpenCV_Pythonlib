@@ -11,6 +11,7 @@ class ControlBotModule():
         from sensor_msgs.msg import Image, CompressedImage  # for '/kamera' Subscriber
         from geometry_msgs.msg import Twist, Vector3        # for '/cmd_vel' Publisher
         from sensor_msgs.msg import LaserScan               # for '/scan'   Subscriber
+        from nav_msgs.msg import Odometry                   # for '/odom'   Subscriber
         from std_msgs.msg import UInt8                      # for '/bumper' Subscriber
         import rospy
         # Importing other needed libraries:
@@ -20,6 +21,7 @@ class ControlBotModule():
         self.Image, self.CompressedImage = Image, CompressedImage
         self.Twist, self.Vector3 = Twist, Vector3
         self.LaserScan = LaserScan
+        self.Odometry = Odometry
         self.UInt8 = UInt8
         self.rospy = rospy
         self.CvBridge, self.CvBridgeError = CvBridge, CvBridgeError
@@ -69,6 +71,7 @@ class ControlBotModule():
 
 class VisionBotModule():
     """docstring for VisionBotModule"""
+
     def __init__(self):
         # Importing OpenCV related Libraries:
         import numpy as np
@@ -171,6 +174,7 @@ class VisionBotModule():
 
 class SupportBotModule():
     """docstring for SupportBotModule"""
+    
     def __init__(self):
         # Importing Support related Libraries:
         from heapq import nlargest, nsmallest

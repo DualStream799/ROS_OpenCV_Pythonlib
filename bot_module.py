@@ -125,7 +125,36 @@ class VisionBotModule():
             approx_method = self.cv2.CHAIN_APPROX_SIMPLE
         contours, tree = self.cv2.findContours(canny_frame, retrieval_mode, approx_method)
         return contours
-    
+
+    def contour_features(self, contour, mode):
+        """Calculates a contour's feature based on a valid 'mode' argumment.
+        'mode' = 'area'      : returns float
+        'mode' = 'center'    : returns tuple  (Cx, Cy)
+        'mode' = 'perimeter' : returns float
+        'mode' = 'str-rect'  : returns tuple  (x, y, w, h)
+        'mode' = 'min-rect'  : returns list   [4 corners]
+        'mode' = 'min-circle': returns list   [(x,y), radius]
+        """
+        # Calculates the area:
+        if mode == 'area':
+            return self.cv2.ContourArea(contour)
+        # Calculates the centroid:
+        elif mode == 'center':
+            m = self.cv2.moments(contour)
+            return ( int(m['m10']/m['m00']), int(m['m01']/m['m00']) )
+        # Calculates the perimeter:
+        elif mode == 'perimeter':
+            return self.cv2.arcLenght(contour)
+        # Calculates the straight rectangle around a contour (doesn't consider rotation):
+        elif mode == 'str-rect':
+            return self.cv2.boundingRect(contour)
+        # Calculates the minimum area rectangle around a contour (considers rotation):
+        elif mode == 'min-rect':
+            return [self.np.int0(self.cv2.boxPoints(self.cv2.minAreaRect(contour)))]
+        # Calculates the minimum area circle around a contour:
+        elif mode == 'min-circle':
+            (x,y), radius = self.cv2.minEnclosingCircle(contour)
+            return [(int(x), int(y)), int(radius)]
 
     def display_contours(self, frame, contours_list, mode=-1, color=[0, 255, 0], thickness=2):
         """Draws all contours on a frame in a given color and border thickness

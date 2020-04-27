@@ -7,7 +7,7 @@
 
   To add it inside your project's repository run this command:
 
-<code>git clone --recurse-submodule https://github.com/DualStream799/ROS_OpenCV_Pythonlib.git</code>
+<code>git submodule add https://github.com/DualStream799/ROS_OpenCV_Pythonlib.git</code>
 
   After that is required to import the desired python libraries. On your own *.py* file add the following lines bellow all other imports:
 

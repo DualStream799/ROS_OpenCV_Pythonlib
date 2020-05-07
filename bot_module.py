@@ -104,11 +104,13 @@ class VisionBotModule():
         return bgr_frame, gray_frame, rgb_frame, hsv_frame
 
 
-    def frame_mask_hsv(self, hsv_frame, hue_value, hue_range_width, saturation_range=[0, 255], value_range=[0, 255]):
+    def frame_mask_hsv(self, hsv_frame, hue_value, hue_range_width, saturation_range=(0, 255), value_range=(0, 255)):
         """Creates a mask based on a given Hue value from the standard HSV colorspace and does the convertions to OpenCV HSV colorspace (standard HSV range: 0-360 / OpenCV HSV range: 0-180).
         By default Saturation and Value components doesn't have filters"""
-        color_high = self.np.array((hue_value/2 + hue_range_width, saturation_range[1], value_range[1]))
-        color_low = self.np.array((hue_value/2 - hue_range_width, saturation_range[0], value_range[0]))
+        if type(hue_range_width) == int:
+            hue_range_width = (hue_range_width, hue_range_width)
+        color_high = self.np.array((hue_value/2 + hue_range_width[1], saturation_range[1], value_range[1]))
+        color_low = self.np.array((hue_value/2 - hue_range_width[0], saturation_range[0], value_range[0]))
         return self.cv2.inRange(hsv_frame, color_low, color_high)
 
 
@@ -124,7 +126,20 @@ class VisionBotModule():
         if approx_method is None:
             approx_method = self.cv2.CHAIN_APPROX_SIMPLE
         contours, tree = self.cv2.findContours(canny_frame, retrieval_mode, approx_method)
-        return contours
+        return contours, tree
+
+    def contour_biggest_area(self, contours):
+        """Returns the contour with the biggest area"""
+        biggest_contour = None
+        biggest_contour_area = 0
+        # Check if the current contour is bigger than the previous one:
+        for contour in contours:
+            area = self.contour_features(contour, 'area')
+            if area > biggest_contour_area:
+                biggest_contour = contour
+                biggest_contour_area = area
+
+        return biggest_contour
 
     def contour_features(self, contour, mode):
         """Calculates a contour's feature based on a valid 'mode' argumment.
@@ -137,7 +152,7 @@ class VisionBotModule():
         """
         # Calculates the area:
         if mode == 'area':
-            return self.cv2.ContourArea(contour)
+            return self.cv2.contourArea(contour)
         # Calculates the centroid:
         elif mode == 'center':
             m = self.cv2.moments(contour)
@@ -156,7 +171,7 @@ class VisionBotModule():
             (x,y), radius = self.cv2.minEnclosingCircle(contour)
             return [(int(x), int(y)), int(radius)]
 
-    def display_contours(self, frame, contours_list, mode=-1, color=[0, 255, 0], thickness=2):
+    def contour_draw(self, frame, contours_list, mode=-1, color=[0, 255, 0], thickness=2):
         """Draws all contours on a frame in a given color and border thickness
         'mode' = -1 : contours' borders
         'mode' = 0  : contours filled"""
@@ -184,9 +199,19 @@ class VisionBotModule():
             return self.cv2.morphologyEx(frame, self.cv2.MORPH_BLACKHAT, kernel)
 
 
-    # METHODS FOR DISPLAY CONFIGURATIONS:
+    # METHODS FOR DISPLAY ELEMENTS:
+    def display_frame(self, title, frame):
+        """Displays a frame"""
+        self.cv2.imshow(title, frame)
+
+    def display_terminate(self, title=None):
+        if title is not None:
+            self.cv2.destroyWindow(title)
+        else:
+            self.cv2.destroyAllWindows()
+
     def display_aim(self, rgb_frame, point, color=[0, 255, 255], width=2, length=4):
-        """Draws a '+' over a given point"""
+        """Displays a aim ('+' symbol) over a given point"""
         self.cv2.line(rgb_frame, (point[0] - length/2, point[1]), (point[0] + length/2, point[1]), color, width, length)
         self.cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 
     

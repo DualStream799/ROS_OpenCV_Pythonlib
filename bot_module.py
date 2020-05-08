@@ -73,7 +73,73 @@ class ControlBotModule():
 		return self.Twist(self.Vector3(0, 0, 0), self.Vector3(0, 0, 0))
 
 
-class VisionBotModule():
+class SupportBotModule():
+	"""docstring for SupportBotModule"""
+	
+	def __init__(self):
+		# Importing Support related Libraries:
+		from heapq import nlargest, nsmallest
+		import numpy as np
+		import math
+		# Setting imported libaries available outside '__init__' scope but inside 'ControlBotModule' scope (Imports only when the class is instanced and let them available to all class' methods):
+		self.nlargest, self.nsmallest = nlargest, nsmallest
+		self.np = np
+		self.math = math
+
+
+	def calculate_projection(self, point1, point2, module=True):
+		"""Calculates line's projection over an axis (function return the module of the subtraction, for negative values set 'module' to False)
+		x-axis projection = 0 : vertical lines (0º)
+		y-axis projection = 0 : horizontal lines (180º)
+		diff of both projections = 0 : diagonal lines (45º)"""
+		proj_x, proj_y = [point1[0] - point2[0], point1[1] - point2[1]]
+		proj_diff = proj_x - proj_y
+		if module:
+			return abs(proj_x), abs(proj_y), abs(proj_diff)
+		else:
+			return proj_x, proj_y, proj_diff
+
+	
+	def angular_coefficient(self, point1, point2, decimals=0, to_degrees=False):
+		"""Calculates the angular coefficient if a line between two points using the current formula: (y - y0) = m*(x - x0)"""
+		m = (point2[1] - point1[1])/(point2[0] - point1[0])
+		if to_degrees == False:
+			return m
+		else:
+			return round(self.math.degrees(self.math.atan(m)), decimals)
+
+	def calculate_vanishing_point(self, p1, p2, q1, q2):
+		"""Calculates vanishing point based in the intersection of two lines"""
+		def calculate_h(point, m):
+			return point[1] - m*point[0]
+
+		m1 = self.angular_coefficient(p1, p2)
+		m2 = self.angular_coefficient(q1, q2)
+		
+		h1 = calculate_h(p1, m1)
+		h2 = calculate_h(q1, m2)
+		
+		xi = (h2 - h1)/(m1 - m2)
+		yi = m1*xi + h1
+		
+		return (int(xi), int(yi))
+
+
+	def convert_lines_angular_to_linear(self, rho, theta):
+		"""Calculates two points given a 'rho' and 'theta' values of a line (usefull to deals with the results of 'cv2.HoughLines')"""
+		a = self.np.cos(theta)
+		b = self.np.sin(theta)
+		x0 = a*rho
+		y0 = b*rho
+		return (int(x0 + 1000*(-b)), int(y0 + 1000*(a))), (int(x0 - 1000*(-b)) , int(y0 - 1000*(a)))
+
+
+	def convert_dimensions_to_points(self, dimensions, w_multiplier=1, h_multiplier=1):
+		""" Convert dimensions (x, y, w, h) into two points (x0, y0) e (x1, y1) on any scale proportion"""
+		return (int(dimensions[0]), int(dimensions[1])), (int(dimensions[0]+dimensions[2]*w_multiplier), int(dimensions[1]+dimensions[3]*h_multiplier))
+
+
+class VisionBotModule(SupportBotModule):
 	"""docstring for VisionBotModule"""
 
 	def __init__(self):
@@ -85,7 +151,7 @@ class VisionBotModule():
 		self.nlargest = nlargest
 		self.cv2 = cv2
 		self.np = np
-
+		#self.sup = SupportBotModule()
 
 	# METHODS FOR COMPUTER VISION PROCESSMENTS:
 	def frame_flip(self, frame, flip_mode):
@@ -136,10 +202,12 @@ class VisionBotModule():
 		contours, tree = self.cv2.findContours(canny_frame, retrieval_mode, approx_method)
 		return contours, tree
 
+
 	def contour_biggest_area(self, contours):
 		"""Returns the contour which has the biggest area"""
 		return self.nlargest(1, contours, key=lambda x: self.cv2.contourArea(x))[0]
 		#return biggest_contour
+
 
 	def contour_features(self, contour, mode):
 		"""Calculates a contour's feature based on a valid 'mode' argumment.
@@ -170,6 +238,7 @@ class VisionBotModule():
 		elif mode == 'min-circle':
 			(x,y), radius = self.cv2.minEnclosingCircle(contour)
 			return [(int(x), int(y)), int(radius)]
+
 
 	def contour_draw(self, frame, contours_list, mode=-1, color=[0, 255, 0], thickness=2):
 		"""Draws all contours on a frame in a given color and border thickness
@@ -227,69 +296,10 @@ class VisionBotModule():
 		self.cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 
 	
 
-	def draw_rectangle(self, frame, dimensions, color=(0, 255, 255)):
+	def draw_rectangle(self, frame, dimensions, color=(0, 255, 255), scale=(1,1)):
 		"""Draws a rectangle on the frame dealing directly with cv2.boundingRect (present in 'contour_features' method if mode='str-rect') returned data
-		('dimensions' parameters expects a tuple of 4 values [x, y, w, h] returned from cv2.boundingRect"""
-		x, y, w, h = dimensions[0], dimensions[1], dimensions[2], dimensions[3]
-		self.cv2.rectangle(frame, (int(x), int(y)), (int(x+w), int(y+h)), color, thickness=2)
+		('dimensions' parameters expects a tuple of 4 values (x, y, w, h) returned from cv2.boundingRect"""
+		p1, p2 = self.convert_dimensions_to_points(dimensions, scale[0], scale[1])
+		self.cv2.rectangle(frame, p1, p2, color, thickness=2)
 
 
-class SupportBotModule():
-	"""docstring for SupportBotModule"""
-	
-	def __init__(self):
-		# Importing Support related Libraries:
-		from heapq import nlargest, nsmallest
-		import numpy as np
-		import math
-		# Setting imported libaries available outside '__init__' scope but inside 'ControlBotModule' scope (Imports only when the class is instanced and let them available to all class' methods):
-		self.nlargest, self.nsmallest = nlargest, nsmallest
-		self.np = np
-		self.math = math
-
-
-	def convert_lines_angular_to_linear(self, rho, theta):
-		"""Calculates two points given a 'rho' and 'theta' values of a line (usefull to deals with the results of 'cv2.HoughLines')"""
-		a = self.np.cos(theta)
-		b = self.np.sin(theta)
-		x0 = a*rho
-		y0 = b*rho
-		return (int(x0 + 1000*(-b)), int(y0 + 1000*(a))), (int(x0 - 1000*(-b)) , int(y0 - 1000*(a)))
-
-
-	def calculate_projection(self, point1, point2, module=True):
-		"""Calculates line's projection over an axis (function return the module of the subtraction, for negative values set 'module' to False)
-		x-axis projection = 0 : vertical lines (0º)
-		y-axis projection = 0 : horizontal lines (180º)
-		diff of both projections = 0 : diagonal lines (45º)"""
-		proj_x, proj_y = [point1[0] - point2[0], point1[1] - point2[1]]
-		proj_diff = proj_x - proj_y
-		if module:
-			return abs(proj_x), abs(proj_y), abs(proj_diff)
-		else:
-			return proj_x, proj_y, proj_diff
-
-	
-	def angular_coefficient(self, point1, point2, decimals=0, to_degrees=False):
-		"""Calculates the angular coefficient if a line between two points using the current formula: (y - y0) = m*(x - x0)"""
-		m = (point2[1] - point1[1])/(point2[0] - point1[0])
-		if to_degrees == False:
-			return m
-		else:
-			return round(self.math.degrees(self.math.atan(m)), decimals)
-
-	def calculate_vanishing_point(self, p1, p2, q1, q2):
-		"""Calculates vanishing point based in the intersection of two lines"""
-		def calculate_h(point, m):
-			return point[1] - m*point[0]
-
-		m1 = self.angular_coefficient(p1, p2)
-		m2 = self.angular_coefficient(q1, q2)
-		
-		h1 = calculate_h(p1, m1)
-		h2 = calculate_h(q1, m2)
-		
-		xi = (h2 - h1)/(m1 - m2)
-		yi = m1*xi + h1
-		
-		return (int(xi), int(yi))

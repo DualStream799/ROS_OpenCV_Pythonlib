@@ -68,15 +68,21 @@ class ControlBotModule():
 		"""Returns a Twist object with all the linear and algular values on it"""
 		return self.Twist(self.Vector3(self.linear_x, self.linear_y, self.linear_z), self.Vector3(self.angular_x, self.angular_y, self.angular_z))
 
+	def stop_twist(self):
+		"""Returns a Twist object with all the linear and angular values zeroed"""
+		return self.Twist(self.Vector3(0, 0, 0), self.Vector3(0, 0, 0))
+
 
 class VisionBotModule():
 	"""docstring for VisionBotModule"""
 
 	def __init__(self):
 		# Importing OpenCV related Libraries:
+		from heapq import nlargest
 		import numpy as np
 		import cv2
 		# Setting imported libaries available outside '__init__' scope but inside 'ControlBotModule' scope (Imports only when the class is instanced and let them available to all class' methods):
+		self.nlargest = nlargest
 		self.cv2 = cv2
 		self.np = np
 
@@ -131,9 +137,8 @@ class VisionBotModule():
 		return contours, tree
 
 	def contour_biggest_area(self, contours):
-		"""Returns the contour with the biggest area"""
-		return max(contours, key=self.cv2.contourArea)
-
+		"""Returns the contour which has the biggest area"""
+		return self.nlargest(1, contours, key=lambda x: self.cv2.contourArea(x))[0]
 		#return biggest_contour
 
 	def contour_features(self, contour, mode):
@@ -205,20 +210,28 @@ class VisionBotModule():
 		else:
 			self.cv2.destroyAllWindows()
 
-	def draw_aim(self, rgb_frame, point, color=[0, 255, 255], width=2, length=4):
-		"""Displays a aim ('+' symbol) over a given point"""
-		self.cv2.line(rgb_frame, (point[0] - length/2, point[1]), (point[0] + length/2, point[1]), color, width, length)
-		self.cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 
-	
 
 	def draw_text(self, frame, text, position, thickness, font_size=1, text_color=(255, 255, 255), shadow_color=(128, 128, 128), font_style=None, line_style=None):
-		"""Displays a text on the frame with a shadow behind it for better visualization on any background"""
+		"""Draws a text on the frame with a shadow behind it for better visualization on any background"""
 		if font_style is None:
 			font_style = self.cv2.FONT_HERSHEY_SIMPLEX
 		if line_style is None:
 			line_style = self.cv2.LINE_AA
 		self.cv2.putText(frame, text, position, font_style, font_size, shadow_color, thickness+1, line_style)
 		self.cv2.putText(frame, text, position, font_style, font_size, text_color, thickness, line_style)
+
+
+	def draw_aim(self, rgb_frame, point, color=(0, 255, 255), width=4, length=4):
+		"""Draws a aim ('+' symbol) over a given point on the frame"""
+		self.cv2.line(rgb_frame, (point[0] - length/2, point[1]), (point[0] + length/2, point[1]), color, width, length)
+		self.cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 
+	
+
+	def draw_rectangle(self, frame, dimensions, color=(0, 255, 255)):
+		"""Draws a rectangle on the frame dealing directly with cv2.boundingRect (present in 'contour_features' method if mode='str-rect') returned data
+		('dimensions' parameters expects a tuple of 4 values [x, y, w, h] returned from cv2.boundingRect"""
+		x, y, w, h = dimensions[0], dimensions[1], dimensions[2], dimensions[3]
+		self.cv2.rectangle(frame, (int(x), int(y)), (int(x+w), int(y+h)), color, thickness=2)
 
 
 class SupportBotModule():

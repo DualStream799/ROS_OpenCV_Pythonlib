@@ -3,75 +3,6 @@
 
 __author__ = "DualStream799"
 
-class ControlBotModule():
-	"""docstring for TurtleBot"""
-
-	def __init__(self):
-		# Importing ROS related Libraries:
-		from sensor_msgs.msg import Image, CompressedImage  # for '/kamera' Subscriber
-		from geometry_msgs.msg import Twist, Vector3        # for '/cmd_vel' Publisher
-		from sensor_msgs.msg import LaserScan               # for '/scan'   Subscriber
-		from nav_msgs.msg import Odometry                   # for '/odom'   Subscriber
-		from std_msgs.msg import UInt8                      # for '/bumper' Subscriber
-		import rospy
-		# Importing other needed libraries:
-		from cv_bridge import CvBridge, CvBridgeError
-		import numpy as np
-		# Setting imported libaries available outside '__init__' scope but inside 'ControlBotModule' scope (Imports only when the class is instanced and let them available to all class' methods):
-		self.Image, self.CompressedImage = Image, CompressedImage
-		self.Twist, self.Vector3 = Twist, Vector3
-		self.LaserScan = LaserScan
-		self.Odometry = Odometry
-		self.UInt8 = UInt8
-		self.rospy = rospy
-		self.CvBridge, self.CvBridgeError = CvBridge, CvBridgeError
-		self.np = np
-		# Instance needed to convert the images from "/kamera" to OpenCV especifications:
-		self.cv_bridge = self.CvBridge()
-
-		# Recieves the "/scan" Subscriber data:
-		self.scan_data = []
-		# Recieves the "/bumper" Subscriber data:
-		self.bumper = 0
-		# Recieves the "scan_data" element corresponding with frontal distance:
-		self.ahead_fisrt = 0
-		self.ahead_last = 0
-		# Standard speed for insert on 'Vector3' objects:
-		self.linear_x = 0
-		self.linear_y = 0
-		self.linear_z = 0
-		self.angular_x = 0
-		self.angular_y = 0
-		self.angular_z = 0
-
-	
-	# METHODS FOR DEALING WITH ROS DATA SENSORS:
-	def laser_scan(self, data):
-		"""Deals with '/scan' Subscriber data"""
-		self.scan_data = self.np.array(data.ranges).round(decimals=2)
-		self.ahead_fisrt = self.scan_data[0]
-		self.ahead_last = self.scan_data[-1]
-
-
-	def bumper_scan(self, dado):
-		"""Deals with '/bumper' Subscriber data"""
-		self.bumper = dado.data
-
-
-	def convert_compressed_to_cv2(self, image):
-		"""Deals with '/kamera' Subscriber data"""
-		return self.cv_bridge.compressed_imgmsg_to_cv2(image, "bgr8")
-
-
-	# METHODS FOR ROS MOVIMENTATION:
-	def main_twist(self):
-		"""Returns a Twist object with all the linear and algular values on it"""
-		return self.Twist(self.Vector3(self.linear_x, self.linear_y, self.linear_z), self.Vector3(self.angular_x, self.angular_y, self.angular_z))
-
-	def stop_twist(self):
-		"""Returns a Twist object with all the linear and angular values zeroed"""
-		return self.Twist(self.Vector3(0, 0, 0), self.Vector3(0, 0, 0))
-
 
 class SupportBotModule():
 	"""docstring for SupportBotModule"""
@@ -85,6 +16,11 @@ class SupportBotModule():
 		self.nlargest, self.nsmallest = nlargest, nsmallest
 		self.np = np
 		self.math = math
+
+
+	def calculate_hypotenuse_2D(self, point):
+		"""Calculates hypotenuse given x and y values of a point (x, y)"""
+		return self.math.sqrt(point[0]**2 + point[1]**2)
 
 
 	def calculate_projection(self, point1, point2, module=True):
@@ -137,6 +73,124 @@ class SupportBotModule():
 	def convert_dimensions_to_points(self, dimensions, w_multiplier=1, h_multiplier=1):
 		""" Convert dimensions (x, y, w, h) into two points (x0, y0) e (x1, y1) on any scale proportion"""
 		return (int(dimensions[0]), int(dimensions[1])), (int(dimensions[0]+dimensions[2]*w_multiplier), int(dimensions[1]+dimensions[3]*h_multiplier))
+
+
+
+class ControlBotModule(SupportBotModule):
+	"""docstring for TurtleBot"""
+
+	def __init__(self):
+		# Importing ROS related Libraries:
+		from sensor_msgs.msg import Image, CompressedImage  # for '/kamera' Subscriber
+		from geometry_msgs.msg import Twist, Vector3, Point # for '/cmd_vel' Publisher
+		from sensor_msgs.msg import LaserScan               # for '/scan'   Subscriber
+		from nav_msgs.msg import Odometry                   # for '/odom'   Subscriber
+		from std_msgs.msg import UInt8                      # for '/bumper' Subscriber
+		import rospy
+		# Importing other needed libraries:
+		from cv_bridge import CvBridge, CvBridgeError
+		import tf
+		import numpy as np
+		import math
+		# Setting imported libaries available outside '__init__' scope but inside 'ControlBotModule' scope (Imports only when the class is instanced and let them available to all class' methods):
+		self.Image, self.CompressedImage = Image, CompressedImage
+		self.Twist, self.Vector3, self.Point = Twist, Vector3, Point
+		self.LaserScan = LaserScan
+		self.Odometry = Odometry
+		self.UInt8 = UInt8
+		self.rospy = rospy
+		self.CvBridge, self.CvBridgeError = CvBridge, CvBridgeError
+		self.tf = tf
+		self.np = np
+		self.math = math
+		# Instance needed to convert the images from "/kamera" to OpenCV especifications:
+		self.cv_bridge = self.CvBridge()
+
+		# Recieves the '/scan' Subscriber data:
+		self.scan_data = []
+		# Recieves the '/bumper' Subscriber data:
+		self.bumper = 0
+		# Recieves the '/scan_data' element corresponding with frontal distance:
+		self.ahead_fisrt = 0
+		self.ahead_last = 0
+		# Reciever the '/odom' Subscriber data:
+		self.odom_x = 0
+		self.odom_y = 0
+		self.odom_z = 0
+		self.odom_roll = 0
+		self.odom_pitch = 0
+		self.odom_yaw = 0
+		# Standard speed for insert on 'Vector3' objects:
+		self.linear_x = 0
+		self.linear_y = 0
+		self.linear_z = 0
+		self.angular_x = 0
+		self.angular_y = 0
+		self.angular_z = 0
+		# A Goal defines a point on space where the bot aims to go:
+		self.goal_point = self.Point()
+		self.goal_angle = 0
+		self.goal_distance = 0
+		self.goal_orientation = [0, 0, 0]
+	
+
+	# METHODS FOR DEALING WITH ROS DATA SENSORS:
+	def laser_scan(self, data):
+		"""Deals with '/scan' Subscriber data"""
+		self.scan_data = self.np.array(data.ranges).round(decimals=2)
+		self.ahead_fisrt = self.scan_data[0]
+		self.ahead_last = self.scan_data[-1]
+
+
+	def bumper_scan(self, dado):
+		"""Deals with '/bumper' Subscriber data"""
+		self.bumper = dado.data
+
+
+	def odom_scan(self, ros_msg):
+		"""Deals with '/odom' Subscriber data"""
+		# Position:
+		self.odom_x = ros_msg.pose.pose.position.x
+		self.odom_y = ros_msg.pose.pose.position.y
+		self.odom_z = ros_msg.pose.pose.position.z
+		# Orientation:
+		self.odom_roll, self.odom_pitch, self.odom_yaw = self.convert_quaternion_to_radians(ros_msg.pose.pose.orientation)
+
+
+	# METHODS FOR SENSOR DATA CONVERSION:
+	def convert_compressed_to_cv2(self, image):
+		"""Deals with '/kamera' Subscriber data"""
+		return self.cv_bridge.compressed_imgmsg_to_cv2(image, "bgr8")
+
+
+	def convert_quaternion_to_radians(self, orientation):
+		"""Converts the odometry orientation from quaternion (representation system used on ROS) to radians rotations  on three axis"""
+		roll, pitch, yaw = self.tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+		return roll, pitch, yaw
+
+
+	# METHODS FOR ROS MOVIMENTATION:
+	def main_twist(self):
+		"""Returns a Twist object with all the linear and algular values on it"""
+		return self.Twist(self.Vector3(self.linear_x, self.linear_y, self.linear_z), self.Vector3(self.angular_x, self.angular_y, self.angular_z))
+
+	def stop_twist(self):
+		"""Returns a Twist object with all the linear and angular values zeroed"""
+		return self.Twist(self.Vector3(0, 0, 0), self.Vector3(0, 0, 0))
+
+	def set_goal(self, x=0, y=0, z=0):
+		"""Defines a Point as a goal to be used as reference to go to"""
+		self.goal_point.x = x
+		self.goal_point.y = y
+		self.goal_point.z = z
+
+	def update_goal_state(self):
+		diff_x = self.goal_point.x - self.odom_x
+		diff_y = self.goal_point.y - self.odom_y
+		self.goal_distance = self.calculate_hypotenuse_2D((diff_x, diff_y))
+		self.goal_angle = self.math.atan2(diff_x, diff_y)
+		if self.goal_angle > self.math.pi:
+			self.goal_angle -= self.math.pi
 
 
 class VisionBotModule(SupportBotModule):
@@ -280,7 +334,7 @@ class VisionBotModule(SupportBotModule):
 			self.cv2.destroyAllWindows()
 
 
-	def draw_text(self, frame, text, position, thickness, font_size=1, text_color=(255, 255, 255), shadow_color=(128, 128, 128), font_style=None, line_style=None):
+	def draw_text(self, frame, text, position, thickness=2, font_size=1, text_color=(255, 255, 255), shadow_color=(128, 128, 128), font_style=None, line_style=None):
 		"""Draws a text on the frame with a shadow behind it for better visualization on any background"""
 		if font_style is None:
 			font_style = self.cv2.FONT_HERSHEY_SIMPLEX
@@ -290,7 +344,7 @@ class VisionBotModule(SupportBotModule):
 		self.cv2.putText(frame, text, position, font_style, font_size, text_color, thickness, line_style)
 
 
-	def draw_aim(self, rgb_frame, point, color=(0, 255, 255), width=4, length=4):
+	def draw_aim(self, rgb_frame, point, color=(0, 255, 255), width=2, length=8):
 		"""Draws a aim ('+' symbol) over a given point on the frame"""
 		self.cv2.line(rgb_frame, (point[0] - length/2, point[1]), (point[0] + length/2, point[1]), color, width, length)
 		self.cv2.line(rgb_frame, (point[0], point[1] - length/2), (point[0], point[1] + length/2), color, width, length) 

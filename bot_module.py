@@ -111,7 +111,7 @@ class ControlBotModule(SupportBotModule):
 		# Recieves the '/bumper' Subscriber data:
 		self.bumper = 0
 		# Recieves the '/scan_data' element corresponding with frontal distance:
-		self.ahead_fisrt = 0
+		self.ahead_first = 0
 		self.ahead_last = 0
 		# Reciever the '/odom' Subscriber data:
 		self.odom_x = 0
@@ -138,7 +138,7 @@ class ControlBotModule(SupportBotModule):
 	def laser_scan(self, data):
 		"""Deals with '/scan' Subscriber data"""
 		self.scan_data = self.np.array(data.ranges).round(decimals=2)
-		self.ahead_fisrt = self.scan_data[0]
+		self.ahead_first = self.scan_data[0]
 		self.ahead_last = self.scan_data[-1]
 
 
@@ -189,8 +189,6 @@ class ControlBotModule(SupportBotModule):
 		diff_y = self.goal_point.y - self.odom_y
 		self.goal_distance = self.calculate_hypotenuse_2D((diff_x, diff_y))
 		self.goal_angle = self.math.atan2(diff_x, diff_y)
-		if self.goal_angle > self.math.pi:
-			self.goal_angle -= self.math.pi
 
 
 class VisionBotModule(SupportBotModule):
